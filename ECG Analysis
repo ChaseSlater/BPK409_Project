@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar  25 2021
+
+@author: chaseslater
+"""
+
+"""Import Libraries"""
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.signal
+import Lab2FunctionsNoPlot as l2f
+
+%matplotlib qt
+
+"MAIN CODE SUBMISSIO 1.0"
+
+#Question 1 - diagram
+
+#Question 2 - Each member's Resting HR
+
+"""Import resting File"""
+
+column_names = [
+    "ecg",
+    "t"
+]
+
+testecg_Chase = pd.read_csv("Chase_ECG_Test_2.txt",
+    names = column_names, sep = '\t', skiprows = 5000, skipfooter = 5000, engine = 'python')
+
+# Filter
+        
+testecg_Chase.t = testecg_Chase.t/1000
+Wn = 0.1
+b, a = scipy.signal.butter(4, Wn, 'low', analog = False)
+filt_testecg_Chase = scipy.signal.filtfilt(b, a, testecg_Chase.ecg)
+plt.figure(1)
+plt.plot(testecg_Chase.t, testecg_Chase.ecg, color = "b", label = 'Raw ECG')
+plt.plot(testecg_Chase.t, filt_testecg_Chase, color = "orange", label = ' Filtered ECG')
+# plt.xlim([43,48])
+plt.xlabel('Time [s]')  
+plt.ylabel('ECG Amplitude [mV]')
+plt.title("Chase's ECG Measure")
+plt.legend()
+
+# Calculate Peaks
+
+peaks,_ = scipy.signal.find_peaks(filt_testecg_Chase, height = 345)
+
+plt.figure(5)
+plt.plot(testecg_Chase.t, filt_testecg_Chase, label = 'Filtered ECG')
+plt.plot(testecg_Chase.t[peaks], filt_testecg_Chase[peaks], "x", label = 'R-Wave Peak')
+# plt.axis([320, 325, 270, 410])
+plt.title("Filtered ECG Signal with R-Wave Peaks Labelled")
+plt.xlabel("Time (s)")
+plt.ylabel("ECG Amplitude (mV)")
+plt.legend(loc = 'right')
+
+# Calculating RR Intervals, Mean HR, Mean HRV
+
+d_ecg, peaks_d_ecg = l2f.decg_peaks(testecg_Chase.ecg, testecg_Chase.t)
+Rwave_peaks_d_ecg = l2f.d_ecg_peaks(d_ecg, peaks_d_ecg, testecg_Chase.t, 0.4, 0.5)
+restingecg_Rwave_t = l2f.Rwave_peaks(testecg_Chase.ecg, d_ecg, Rwave_peaks_d_ecg, testecg_Chase.t)
+RR_interval = np.diff(restingecg_Rwave_t)
+plt.plot(RR_interval)
+heartrate_resting_Chase = (1/RR_interval)*60
+Wn = 0.2
+b2, a2 = scipy.signal.butter(4, Wn, 'low', analog = False) #find a good value for Wn
+filt_heartrate_Chase = scipy.signal.filtfilt(b2, a2, heartrate_resting_Chase) 
+heartrate_resting_Chase_X = l2f.newX_axis(RR_interval) #In Lab2Functions, change X_list =[0]*[The Amount of RR Intervals]
+#plt.figure(5)
+#plt.plot(filt_heartrate_Chase)
+avg = sum(filt_heartrate_Chase)/len(filt_heartrate_Chase)
+print("Chase's average HR = ", round(avg,2))
+print("Chase's HRV = ", np.std(filt_heartrate_Chase))
+print ('\n')
+
+plt.figure(8)
+plt.show()
+plt.plot(heartrate_resting_Chase_X, filt_heartrate_Chase)
+plt.title("Filtered Heart Rate During Test Experiment")
+plt.xlabel('Time (s)')
+plt.ylabel('Heart Rate (bpm)')
+plt.axvline(300, color = 'red')
+plt.axvline(960, color = 'red')
